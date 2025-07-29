@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api import audio_router  # __init__.py에서 import된 router 사용
+from app.api import audio_router 
 from app.api import video_router
 
 app = FastAPI()
