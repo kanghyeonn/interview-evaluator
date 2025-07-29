@@ -1,9 +1,13 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from app.services.clovaspeech import ClovaSpeechClient
 import tempfile
 import os
 import whisper
 import asyncio
 import subprocess
+from dotenv import load_dotenv
+
+load_dotenv()
 
 os.environ["PATH"] += os.pathsep + r"C:\ffmpeg\ffmpeg-7.1.1-essentials_build\ffmpeg-7.1.1-essentials_build\bin"
 
@@ -45,16 +49,23 @@ async def websocket_endpoint(websocket: WebSocket):
             return
 
         # 4. Whisper로 텍스트 추출
-        result = model.transcribe(wav_path, language='ko')
-        print("📝 STT 결과:", result["text"])
+        # result = model.transcribe(wav_path, language='ko')
+        # print("📝 STT 결과:", result["text"])
+
+        # 4. Clova로 텍스트 추출
+        clova = ClovaSpeechClient()
+        text, data = clova.get_full_text_from_upload(wav_path, diarization=None)
+        print("📝 STT 결과:", text)
+        print(data)
+        print(wav_path)
 
         # 5. 결과 전송
         await websocket.send_json({
-            "transcript": result["text"]
+            "transcript": text
         })
 
-        os.remove(webm_path)
-        os.remove(wav_path)
+        # os.remove(webm_path)
+        # os.remove(wav_path)
 
     except WebSocketDisconnect:
         print("🔌 WebSocket 연결 종료")
