@@ -9,7 +9,7 @@ load_dotenv()
 
 def get_transcribe_id():
     # JWT 토큰을 환경변수에서 읽기
-    jwt_token = os.getenv("JWT_TOKEN")
+    jwt_token = ""
     if not jwt_token:
         raise ValueError("환경변수 'YOUR_JWT_TOKEN'이 설정되지 않았습니다.")
 

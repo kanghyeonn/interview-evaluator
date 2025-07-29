@@ -121,3 +121,9 @@ venv_old/
 dmypy.json
 
 .idea/
+test/
+
+*.json
+*.html
+*.hwpx
+*.pdf

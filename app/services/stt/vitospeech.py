@@ -2,9 +2,11 @@ import os
 import json
 import requests
 import time
+from app.core.jwt_token_updater import JwtTokenManager
 
 class VitoSpeechClient:
-    def __init__(self, token_path: str = "vito_jwt_token.json"):
+    def __init__(self, token_path: str = "../../../vito_jwt_token.json"):
+        JwtTokenManager().update_token_if_needed()
         if not os.path.exists(token_path):
             raise FileNotFoundError(f"{token_path} 파일이 존재하지 않습니다.")
 
@@ -77,9 +79,38 @@ class VitoSpeechClient:
         print("📥 전사 결과:", result)
         return result
 
+    def get_full_text_from_file(self, file_path: str, retry: int = 10, delay: int = 3) -> str:
+        """
+        파일을 업로드하고 전사 완료까지 대기한 후 전체 텍스트를 반환
+        :param file_path: 음성 파일 경로
+        :param retry: 최대 시도 횟수
+        :param delay: 각 시도 사이 대기 시간 (초)
+        :return: 전사된 전체 텍스트 문자열
+        """
+        # 1. 파일 업로드 및 transcribe_id 생성
+        transcribe_id = self.transcribe_file(file_path)
+
+        # 2. 전사 상태가 완료될 때까지 반복 확인
+        for i in range(retry):
+            result = self.get_transcription_result(transcribe_id)
+            status = result.get("status")
+            print(f"⌛️ 현재 상태: {status}")
+
+            if status == "completed":
+                # 3. 결과가 있으면 utterances 리스트에서 msg만 추출
+                utterances = result.get('results', {}).get('utterances', [])
+                messages = [utt.get('msg', '') for utt in utterances]
+                full_text = " ".join(messages)
+                return full_text
+
+            time.sleep(delay)
+
+        print("❌ 전사 완료되지 않음. 나중에 다시 시도하세요.")
+        return ""
+
 if __name__ == "__main__":
     client = VitoSpeechClient()
-    transcribe_id = client.transcribe_file(r'C:\Users\UserK\AppData\Local\Temp\tmp63ci_9kv.wav')
+    transcribe_id = client.transcribe_file(r'C:\Users\ankh1\AppData\Local\Temp\tmpijbvpwdx.wav')
     # 상태가 완료될 때까지 반복해서 확인
     for i in range(10):  # 최대 10번 (약 30초)
         result = client.get_transcription_result(transcribe_id)
@@ -90,8 +121,13 @@ if __name__ == "__main__":
             break
 
         time.sleep(3)
+    # msg만 추출
+    utterances = result['results']['utterances']
+    messages = [utterance['msg'] for utterance in utterances]
 
+    # 하나의 자연스러운 텍스트로 이어붙이기
+    full_text = " ".join(messages)
     if result.get("status") == "completed":
-        print("📝 전사 결과 텍스트:", result.get("text", "텍스트 없음"))
+        print("📝 전사 결과 텍스트:", full_text)
     else:
         print("❌ 전사 완료되지 않음. 나중에 다시 시도하세요.")
