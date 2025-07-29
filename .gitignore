@@ -121,3 +121,4 @@ venv_old/
 dmypy.json
 
 .idea/
+.json
