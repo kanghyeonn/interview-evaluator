@@ -4,7 +4,7 @@ import numpy as np
 import re
 
 class SpeechAnalyzer:
-    def __init__(self, result: Dict, filler_words: List[str]):
+    def __init__(self, result: Dict):
         """
         :param result: ClovaSpeechClient의 response.json() 결과
         :param filler_words: 간투어 리스트 (예: ['어', '음', '아', '그', ...])
@@ -13,7 +13,12 @@ class SpeechAnalyzer:
         self.segments = result.get("segments", [])
         self.total_text = ""
         self.total_duration = 0.0
-        self.filler_words = filler_words
+        self.filler_words = [
+            "음", "어", "아", "그", "저", "뭐", "이제", "그러니까", "있잖아요", "뭐랄까",
+            "뭔가", "약간", "그니까", "뭐지", "어떻게", "뭐라고 해야 하지", "어떻게 보면",
+            "사실", "약간은", "그런데", "근데", "그러면", "그런가", "뭐랄까요", "아마도",
+            "혹시", "일단", "다만", "결국", "음...", "그…", "어…", "음… 그니까"
+        ]
 
     def find_filler_words(self) -> List[Tuple[str, int]]:
         """
@@ -114,7 +119,7 @@ if __name__ == "__main__":
     "뭔가", "약간", "그니까", "뭐지", "어떻게", "뭐라고 해야 하지", "어떻게 보면",
     "사실", "약간은", "그런데", "근데", "그러면", "그런가", "뭐랄까요", "아마도",
     "혹시", "일단", "다만", "결국", "음...", "그…", "어…", "음… 그니까"
-    ]   
+    ]
 
     clova = ClovaSpeechClient()
     vito = VitoSpeechClient()
@@ -123,7 +128,7 @@ if __name__ == "__main__":
     text = vito.get_full_text_from_file(wav_file)
     result = response.json()
 
-    analyzer = SpeechAnalyzer(result, filler_words)
+    analyzer = SpeechAnalyzer(result)
     speed_result = analyzer.speech_speed_calculate()
     pitch_result = analyzer.calculate_pitch_variation(wav_file)
     filler_result = analyzer.find_filler_words(text)
