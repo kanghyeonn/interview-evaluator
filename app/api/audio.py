@@ -1,5 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.services.clovaspeech import ClovaSpeechClient
+from app.services.stt.clovaspeech import ClovaSpeechClient
 import tempfile
 import os
 import whisper

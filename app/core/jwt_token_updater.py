@@ -5,16 +5,12 @@ import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-load_dotenv()
-
-print(os.getenv("VITO_CLIENT_ID"))
-print(os.getenv("VITO_CLIENT_SECRET"))
-
 class JwtTokenManager:
     def __init__(self):
+        load_dotenv()
         self.client_id = os.getenv("VITO_CLIENT_ID")
         self.client_secret = os.getenv("VITO_CLIENT_SECRET")
-        self.output_path = "vito_jwt_token.json"
+        self.output_path = r"C:\project\interview_evaluator\vito_jwt_token.json"
         self.auth_url = "https://openapi.vito.ai/v1/authenticate"
 
     def fetch_token(self) -> dict:
@@ -68,3 +64,4 @@ class JwtTokenManager:
 if __name__ == "__main__":
     manager = JwtTokenManager()
     manager.update_token_if_needed()
+
