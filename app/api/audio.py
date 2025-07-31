@@ -1,11 +1,10 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.services.feedback.speechfeedback import SpeechFeedbackGenerator
-from app.services.speech.analyzer import SpeechAnalyzer
+from app.services.speech.speech_analyzer import SpeechAnalyzer
 from app.services.stt.stt_service import STTService
 import tempfile
 import os
-import whisper
 import asyncio
 import subprocess
 from dotenv import load_dotenv
@@ -15,7 +14,6 @@ load_dotenv()
 os.environ["PATH"] += os.pathsep + r"C:\ffmpeg\ffmpeg-7.1.1-essentials_build\ffmpeg-7.1.1-essentials_build\bin"
 
 router = APIRouter()
-model = whisper.load_model("medium")
 
 @router.websocket("/ws/transcript")
 async def websocket_endpoint(websocket: WebSocket):
@@ -44,12 +42,12 @@ async def websocket_endpoint(websocket: WebSocket):
         ]
         print("🔧 ffmpeg 변환 명령어:", ' '.join(ffmpeg_cmd))
 
-        result = subprocess.run(ffmpeg_cmd, capture_output=True)
-        if result.returncode != 0:
-            print("❌ ffmpeg 변환 실패:", result.stderr.decode())
-            await websocket.send_json({"transcript": "", "expression": "ffmpeg 변환 실패"})
-            #os.remove(webm_path)
-            return
+        # result = subprocess.run(ffmpeg_cmd, capture_output=True)
+        # if result.returncode != 0:
+        #     print("❌ ffmpeg 변환 실패:", result.stderr.decode())
+        #     await websocket.send_json({"transcript": "", "expression": "ffmpeg 변환 실패"})
+        #     #os.remove(webm_path)
+        #     return
 
         # 4. Whisper로 텍스트 추출
         # result = model.transcribe(wav_path, language='ko')
@@ -62,27 +60,27 @@ async def websocket_endpoint(websocket: WebSocket):
         # print(data)
         # print(wav_path)
         # stt 모델 결과 추출
-        # clova
-        clova = STTService(stt_type="vito")
-        clova_text, clova_result = clova.transcribe(wav_path)
+        # # clova
+        # clova = STTService(stt_type="clova")
+        # clova_text, clova_result = clova.transcribe(wav_path)
 
-        # vito
-        vito = STTService(stt_type="vito")
-        vito_text, vito_result = vito.transcribe(wav_path)
+        # # vito
+        # vito = STTService(stt_type="vito")
+        # vito_text, vito_result = vito.transcribe(wav_path)
 
-        # 분석
-        analyzer = SpeechAnalyzer(clova_result)
-        speed = analyzer.speech_speed_calculate()
-        pitch = analyzer.calculate_pitch_variation(wav_path)
-        fillers = analyzer.find_filler_words(vito_text)
+        # # 분석
+        # analyzer = SpeechAnalyzer(clova_result)
+        # speed = analyzer.speech_speed_calculate()
+        # pitch = analyzer.calculate_pitch_variation(wav_path)
+        # fillers = analyzer.find_filler_words(vito_text)
 
-        # speech feedback 생성
-        feedback = SpeechFeedbackGenerator(speed, pitch, fillers).generate_feedback()
+        # # speech feedback 생성
+        # feedback = SpeechFeedbackGenerator(speed, pitch, fillers).generate_feedback()
 
         # 5. 결과 전송
         await websocket.send_json({
-            "transcript": clova_text,
-            "feedback": feedback
+            "transcript": "",
+            "feedback": "feedback"
         })
 
         # os.remove(webm_path)
