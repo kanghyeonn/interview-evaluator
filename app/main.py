@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from app.api import audio_router 
 from app.api import video_router
 from app.api import signup_router
+from app.api import check_username_router
+from app.api import login_router
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -20,3 +22,5 @@ app.add_middleware(
 app.include_router(audio_router)
 app.include_router(video_router)
 app.include_router(signup_router)
+app.include_router(check_username_router)
+app.include_router(login_router)
