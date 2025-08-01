@@ -3,11 +3,20 @@ import json
 import requests
 import time
 from app.core.jwt_token_updater import JwtTokenManager
+from pathlib import Path
 
 class VitoSpeechClient:
-    def __init__(self, token_path: str = r"C:\project\interview_evaluator\vito_jwt_token.json"):
+    def __init__(self, token_path: str = None):
+        # 현재 파일 기준으로 루트 경로를 계산
+        if token_path is None:
+            BASE_DIR = Path(__file__).resolve().parent.parent.parent  # 예: app/services/stt/ → app
+            token_path = BASE_DIR / "vito_jwt_token.json"
+        else:
+            token_path = Path(token_path)
+
         JwtTokenManager().update_token_if_needed()
-        if not os.path.exists(token_path):
+
+        if not token_path.exists():
             raise FileNotFoundError(f"{token_path} 파일이 존재하지 않습니다.")
 
         with open(token_path, "r", encoding="utf-8") as f:
