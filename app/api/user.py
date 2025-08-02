@@ -30,7 +30,7 @@ def login(
         key="access_token",
         value=token_data["access_token"],
         httponly=True,
-        max_age=60 * 60 * 12,
+        max_age=60 * 60 * 2, # 2시간
         path="/"
     )
     return {"message": "로그인 성공"}
