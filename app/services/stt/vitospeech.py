@@ -1,4 +1,8 @@
 import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
+
 import json
 import requests
 import time
@@ -119,7 +123,7 @@ class VitoSpeechClient:
 
 if __name__ == "__main__":
     client = VitoSpeechClient()
-    transcribe_id = client.transcribe_file(r'C:\Users\UserK\AppData\Local\Temp\tmp63ci_9kv.wav')
+    transcribe_id = client.transcribe_file(r'C:\Users\ankh1\AppData\Local\Temp\tmp56u2svr7.wav')
     # 상태가 완료될 때까지 반복해서 확인
     for i in range(10):  # 최대 10번 (약 30초)
         result = client.get_transcription_result(transcribe_id)

@@ -129,3 +129,4 @@ test/
 *.pdf
 .json
 app/services/test/
+interview-evaluator/service-account-key.json

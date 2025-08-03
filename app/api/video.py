@@ -62,22 +62,23 @@ async def expression_socket(websocket: WebSocket):
 
             # 📢 3. 상태 판단
             warnings = []
-            if result["gaze"] != "CENTER":
-                warnings.append(f"시선: {result['gaze']}")
-            if result["head"] != "CENTER":
-                warnings.append(f"고개 방향: {result['head']}")
-            if result["shoulder"] != "STRAIGHT":
-                warnings.append(f"어깨 기울기: {result['shoulder']}")
-            if result["pitch"] != "CENTER":
-                warnings.append(f"머리 방향: {result['pitch']}")
-            if result["hand"] != "Disappearancce":
-                warnings.append(f"손 등장: {result['hand']}")
+
+            if not result["gaze"]:
+                warnings.append("시선 주의")
+            if not result["head"]:
+                warnings.append("고개 방향 주의")
+            if not result["shoulder"]:
+                warnings.append("어깨 기울기 주의")
+            if not result["pitch"]:
+                warnings.append("머리 방향 주의")
+            if not result["hand"]:
+                warnings.append("손 등장")
 
             expression_status = " / ".join(warnings) if warnings else "정상 자세 👌"
             print("expression_status : ", expression_status)
             # 📤 4. 결과 전송
             await websocket.send_json({
-                "expression": expression_status
+                "expression": result
             })
             #print("결과 전송 완료!")
 

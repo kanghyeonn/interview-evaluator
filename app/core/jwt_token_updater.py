@@ -13,6 +13,7 @@ class JwtTokenManager:
         self.client_secret = os.getenv("VITO_CLIENT_SECRET")
         self.client_id = os.getenv("VITO_CLIENT_ID")
         self.client_secret = os.getenv("VITO_CLIENT_SECRET")
+        self.auth_url = "https://openapi.vito.ai/v1/authenticate"
 
         if output_path is None:
             BASE_DIR = Path(__file__).resolve().parent.parent  # 예: app/core

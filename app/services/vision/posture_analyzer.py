@@ -143,8 +143,8 @@ class PostureAnalyzer:
             now = time.time()
             if gaze_vertical != self.gaze_state:
                 if self.gaze_state:
-                    self.gaze_duration_dict[self.gaze_state] += now - gaze_start_time
-                gaze_start_time = now
+                    self.gaze_duration_dict[self.gaze_state] += now - self.gaze_start_time
+                self.gaze_start_time = now
                 self.gaze_state = gaze_vertical
 
             gaze_result = f"Gaze: {gaze_direction} / {gaze_vertical}"
@@ -211,10 +211,10 @@ class PostureAnalyzer:
                 pass
 
         return {
-            "gaze": gaze_result,
-            "head": head_result,
-            "pitch" : pitch_result,
-            "shoulder": shoulder_result,
-            "hand" : hand_result
+            "gaze": gaze_direction == "CENTER" and gaze_vertical == "CENTER",
+            "head": head_result == "CENTER",
+            "pitch": pitch_result == "CENTER",
+            "shoulder": shoulder_result == "STRAIGHT",
+            "hand": hand_result == "UNKNOWN" or hand_result == "Disappearancce"
         }
 

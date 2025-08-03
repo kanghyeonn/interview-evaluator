@@ -1,11 +1,8 @@
 # services/signup_service.py
 
 from sqlalchemy.orm import Session
-from datetime import datetime
 from fastapi import UploadFile
 from app.repository.user import User
-from app.repository.resume import Resume
-from app.services.extrack.extractor import extract_resume_text  # 통합 추출기 사용
 
 def register_user_with_resume(
     db: Session,
@@ -15,15 +12,24 @@ def register_user_with_resume(
     nickname: str,
     birthdate: str,
     desired_job: str,
-    resume: UploadFile = None
+    resume: UploadFile = None,
+    skip_structure: bool = False
 ) -> User:
-    # 1. 이력서 텍스트 추출 (PDF or DOCX)
-    resume_text = extract_resume_text(resume) if resume else ""
+    from app.repository.user import User
+    from app.repository.resume import Resume
+    from datetime import datetime
 
-    # 2. 사용자 저장
+    resume_text = ""
+    structured_data = None
+
+    if resume:
+        resume.file.seek(0)
+        resume_text = resume.file.read().decode(errors="ignore")[:2000]  # 임시로 텍스트 일부 저장
+        resume.file.seek(0)  # 포인터 복원
+
     user = User(
         username=username,
-        password=password,  # 실제 서비스에서는 bcrypt 해시 필요
+        password=password,
         name=name,
         nickname=nickname,
         birthdate=datetime.strptime(birthdate, "%Y-%m-%d").date(),
@@ -33,12 +39,12 @@ def register_user_with_resume(
     db.commit()
     db.refresh(user)
 
-    # 3. 이력서 저장 (user_id 연결)
-    if resume_text:
+    if resume:
         resume_entry = Resume(
             user_id=user.id,
             filename=resume.filename,
-            content=resume_text
+            content=resume_text,
+            structured=None if skip_structure else structured_data
         )
         db.add(resume_entry)
         db.commit()

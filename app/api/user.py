@@ -49,8 +49,13 @@ def logout(response: Response):
     return {"message": "로그아웃 완료"}
 
 @router.get("/me")
-def get_me(user_id: int = Depends(get_current_user)):
-    return {"user_id": user_id, "status": "authenticated"}
+def get_me(user=Depends(get_current_user), db: Session = Depends(get_db)):
+    user_obj = db.query(User).filter(User.id == user).first()
+    return {
+        "user_id": user_obj.id,
+        "nickname": user_obj.nickname,
+        "status": "authenticated"
+    }
 
 @router.get("/check-username")
 def check_username(username: str = Query(...), db: Session = Depends(get_db)):

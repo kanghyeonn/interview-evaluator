@@ -16,7 +16,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # WebSocket 라우터 포함
 app.include_router(audio_router)
 app.include_router(video_router)

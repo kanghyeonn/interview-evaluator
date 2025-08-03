@@ -42,12 +42,12 @@ async def websocket_endpoint(websocket: WebSocket):
         ]
         print("🔧 ffmpeg 변환 명령어:", ' '.join(ffmpeg_cmd))
 
-        # result = subprocess.run(ffmpeg_cmd, capture_output=True)
-        # if result.returncode != 0:
-        #     print("❌ ffmpeg 변환 실패:", result.stderr.decode())
-        #     await websocket.send_json({"transcript": "", "expression": "ffmpeg 변환 실패"})
-        #     #os.remove(webm_path)
-        #     return
+        result = subprocess.run(ffmpeg_cmd, capture_output=True)
+        if result.returncode != 0:
+            print("❌ ffmpeg 변환 실패:", result.stderr.decode())
+            await websocket.send_json({"transcript": "", "expression": "ffmpeg 변환 실패"})
+            #os.remove(webm_path)
+            return
 
         # 4. Whisper로 텍스트 추출
         # result = model.transcribe(wav_path, language='ko')
@@ -59,32 +59,34 @@ async def websocket_endpoint(websocket: WebSocket):
         # print("📝 STT 결과:", text)
         # print(data)
         # print(wav_path)
+
         # stt 모델 결과 추출
-        # # clova
-        # clova = STTService(stt_type="clova")
-        # clova_text, clova_result = clova.transcribe(wav_path)
+        # clova
+        clova = STTService(stt_type="clova")
+        clova_text, clova_result = clova.transcribe(wav_path)
 
-        # # vito
-        # vito = STTService(stt_type="vito")
-        # vito_text, vito_result = vito.transcribe(wav_path)
+        # vito
+        vito = STTService(stt_type="vito")
+        vito_text, vito_result = vito.transcribe(wav_path)
 
-        # # 분석
-        # analyzer = SpeechAnalyzer(clova_result)
-        # speed = analyzer.speech_speed_calculate()
-        # pitch = analyzer.calculate_pitch_variation(wav_path)
-        # fillers = analyzer.find_filler_words(vito_text)
+        # 분석
+        analyzer = SpeechAnalyzer(clova_result)
+        speed = analyzer.speech_speed_calculate()
+        pitch = analyzer.calculate_pitch_variation(wav_path)
+        fillers = analyzer.find_filler_words(vito_text)
 
-        # # speech feedback 생성
-        # feedback = SpeechFeedbackGenerator(speed, pitch, fillers).generate_feedback()
-
+        # speech feedback 생성
+        feedback = SpeechFeedbackGenerator(speed, pitch, fillers).generate_feedback()
+        print(clova_text)
+        print(feedback)
         # 5. 결과 전송
         await websocket.send_json({
             "transcript": "",
             "feedback": "feedback"
         })
 
-        # os.remove(webm_path)
-        # os.remove(wav_path)
+        os.remove(webm_path)
+        os.remove(wav_path)
 
     except WebSocketDisconnect:
         print("🔌 WebSocket 연결 종료")
