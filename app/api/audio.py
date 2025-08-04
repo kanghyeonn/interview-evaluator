@@ -97,29 +97,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
         # 분석
         print("답변 분석중")
-        # question = db.query(InterviewQuestion).filter_by(id=question_id).first()
-        # orchestrator = EvaluationOrchestrator()
-        # result = orchestrator.evaluate_answer(
-        #     question.question_text,
-        #     clova_text,
-        #     question.question_type
-        # )
-        #
-        # evaluation = EvaluationResult(
-        #     question_id=question_id,
-        #     similarity=result["similarity"],
-        #     intent_score=result["intent_score"],
-        #     knowledge_score=result["knowledge_score"],
-        #     final_score=result["final_score"],
-        #     model_answer=result["model_answer"],
-        #     strengths="\n".join(result["feedback"]["strengths"]),
-        #     improvements="\n".join(result["feedback"]["improvements"]),
-        #     final_feedback=result["feedback"]["final_feedback"]
-        # )
-        #
-        # db.add(evaluation)
-        # db.commit()
-
         analyzer = SpeechAnalyzer(clova_result)
         speed = analyzer.speech_speed_calculate()
         pitch = analyzer.calculate_pitch_variation(wav_path)
@@ -127,6 +104,41 @@ async def websocket_endpoint(websocket: WebSocket):
 
         # speech feedback 생성
         feedback = SpeechFeedbackGenerator(speed, pitch, fillers).generate_feedback()
+        labels = feedback.get("labels", {})
+        score_detail = feedback.get("score_detail", {})
+        total_score = feedback.get("total_score", 0)
+
+        question = db.query(InterviewQuestion).filter_by(id=question_id).first()
+        orchestrator = EvaluationOrchestrator()
+        result = orchestrator.evaluate_answer(
+            question.question_text,
+            clova_text,
+            question.question_type
+        )
+
+        evaluation = EvaluationResult(
+            question_id=question_id,
+            similarity=result["similarity"],
+            intent_score=result["intent_score"],
+            knowledge_score=result["knowledge_score"],
+            final_text_score=result["final_score"],
+            model_answer=result["model_answer"],
+            strengths="\n".join(result["feedback"]["strengths"]),
+            improvements="\n".join(result["feedback"]["improvements"]),
+            final_feedback=result["feedback"]["final_feedback"],
+
+            speed_score=score_detail.get("speed"),
+            filler_score=score_detail.get("filler"),
+            pitch_score=score_detail.get("pitch"),
+            fianl_speech_score=total_score,
+            speed_label=labels.get("speed"),
+            fluency_label=labels.get("fluency"),
+            tone_label=labels.get("tone")
+        )
+
+        db.add(evaluation)
+        db.commit()
+
         print(clova_text)
         print(feedback)
         # 5. 결과 전송

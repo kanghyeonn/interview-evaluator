@@ -20,36 +20,45 @@ def get_evaluation_result(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user)  # ✅ 쿠키 기반 인증
 ):
-    # print("questionresult 실행")
-    # # 1. 질문 객체 조회
-    # question = db.query(InterviewQuestion).filter_by(id=question_id).first()
-    # if not question:
-    #     raise HTTPException(status_code=404, detail="질문이 존재하지 않습니다.")
-    #
-    # # 2. 세션 → 사용자 소유 확인
-    # if question.session.user_id != user_id:
-    #     raise HTTPException(status_code=403, detail="접근 권한 없음")
-    #
-    # # 3. 평가 결과 조회
-    # result = db.query(EvaluationResult).filter_by(question_id=question_id).first()
-    # if not result:
-    #     raise HTTPException(status_code=404, detail="평가 결과가 없습니다.")
-    #
-    # # 4. 답변 조회
-    # answer = db.query(InterviewAnswer).filter_by(question_id=question_id).first()
-    #
-    # return {
-    #     "question": question.question_text,
-    #     "user_answer": answer.answer_text if answer else "",
-    #     "model_answer": result.model_answer if result.model_answer else "",
-    #     "final_score": result.final_score,
-    #     "similarity": result.similarity,
-    #     "intent_score": result.intent_score,
-    #     "knowledge_score": result.knowledge_score,
-    #     "strengths": result.strengths.split("\n") if result.strengths else [],
-    #     "improvements": result.improvements.split("\n") if result.improvements else [],
-    #     "final_feedback": result.final_feedback
-    # }
+    print("questionresult 실행")
+    # 1. 질문 객체 조회
+    question = db.query(InterviewQuestion).filter_by(id=question_id).first()
+    if not question:
+        raise HTTPException(status_code=404, detail="질문이 존재하지 않습니다.")
+
+    # 2. 세션 → 사용자 소유 확인
+    if question.session.user_id != user_id:
+        raise HTTPException(status_code=403, detail="접근 권한 없음")
+
+    # 3. 평가 결과 조회
+    result = db.query(EvaluationResult).filter_by(question_id=question_id).first()
+    if not result:
+        raise HTTPException(status_code=404, detail="평가 결과가 없습니다.")
+
+    # 4. 답변 조회
+    answer = db.query(InterviewAnswer).filter_by(question_id=question_id).first()
+
+    return {
+        "question": question.question_text,
+        "user_answer": answer.answer_text if answer else "",
+        "model_answer": result.model_answer if result.model_answer else "",
+        "final_score": result.final_score,
+        "similarity": result.similarity,
+        "intent_score": result.intent_score,
+        "knowledge_score": result.knowledge_score,
+        "strengths": result.strengths.split("\n") if result.strengths else [],
+        "improvements": result.improvements.split("\n") if result.improvements else [],
+        "final_feedback": result.final_feedback,
+        "speed_score": result.speed_score,
+        "filler_score": result.filler_score,
+        "pitch_score": result.pitch_score,
+        "total_score": result.final_speech_score,
+        "labels": {
+            "speed": result.speed_label,
+            "fluency": result.fluency_label,
+            "tone": result.tone_label
+        }
+    }
 
     return {
         "question": "오늘 뭐했어",

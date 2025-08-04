@@ -19,14 +19,17 @@ class SpeechFeedbackGenerator:
 
     def score_filler(self, count: int) -> int:
         """
-        간투어 점수: 0~10개는 점진적 감점, 11개 이상은 가속 감점 (최대 40점)
+        간투어 점수:
+        - 0개: 40점
+        - 1~3개: 점진적 감점 (각각 38, 36, 34점)
+        - 4개 이상: 가속 감점 (5점씩 감소)
         """
         if count == 0:
             return 40
-        elif count <= 10:
-            return int(40 - count * 2)
+        elif count <= 3:
+            return 40 - count * 2
         else:
-            return max(0, int(20 - (count - 10) * 2))
+            return max(0, 34 - (count - 3) * 5)
 
     def score_pitch(self, std: float) -> int:
         """
@@ -59,6 +62,41 @@ class SpeechFeedbackGenerator:
             else:
                 return max(0, int(5 - ((std - 27) / 3) * 5))  # 5~0점
 
+    def classify_labels(self) -> Dict[str, str]:
+        """
+        수치 기반 결과를 바탕으로 speed / fluency / tone을 등급화
+        """
+        # 1. 속도: syllables_per_min 기준
+        spm = self.speed_result.get("syllables_per_min", 0)
+        if spm < 280:
+            speed_label = "느림"
+        elif spm > 400:
+            speed_label = "빠름"
+        else:
+            speed_label = "적절"
+
+        # 2. 간투어 수: fluency
+        filler_count = len(self.filler_result)
+        if filler_count == 0:
+            fluency_label = "매끄러움"
+        elif 1 <= filler_count <= 3:
+            fluency_label = "무난"
+        else:
+            fluency_label = "버벅거림"
+
+        # 3. pitch 표준편차: tone
+        pitch_std = self.pitch_result.get("pitch_std", 0)
+        if pitch_std < 10:
+            tone_label = "단조로움"
+        else:
+            tone_label = "밝음"
+
+        return {
+            "speed": speed_label,
+            "fluency": fluency_label,
+            "tone": tone_label
+        }
+
     def generate_feedback(self) -> Dict:
         """
         점수 및 자연어 피드백과 정규화 종합점수(1.0 기준) 반환
@@ -80,7 +118,7 @@ class SpeechFeedbackGenerator:
         filler_score = self.score_filler(filler_count)
         if filler_count == 0:
             feedback_parts.append("간투어 없이 명확하게 말했습니다!")
-        elif filler_count <= 10:
+        elif filler_count <= 3:
             feedback_parts.append(f"간투어가 {filler_count}회 사용되었습니다. 조금만 줄이면 더 매끄러워질 거예요.")
         else:
             feedback_parts.append(f"간투어가 {filler_count}회 사용되었습니다. 말하기 전에 잠시 생각하고 말해보세요.")
@@ -90,9 +128,11 @@ class SpeechFeedbackGenerator:
         pitch_score = self.score_pitch(pitch_std)
         feedback_parts.append(self.pitch_result.get("pitch_feedback", "음조 분석 결과 없음."))
 
+        total_score = speed_score + filler_score + pitch_score
+
         # 4. 가중치 기반 종합 점수 (1.0 정규화)
         weighted_score = (
-            speed_score + filler_score + pitch_score
+            total_score
         ) / 100.0  # 총점 100 기준
 
         return {
@@ -102,5 +142,6 @@ class SpeechFeedbackGenerator:
                 "filler": filler_score,
                 "pitch": pitch_score
             },
-            "total_score_normalized": round(weighted_score, 2)
+            "total_score": total_score,
+            "labels": self.classify_labels()
         }
