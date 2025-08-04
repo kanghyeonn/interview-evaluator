@@ -48,8 +48,7 @@ def start_interview(db: Session = Depends(get_db), user_id=Depends(get_current_u
     }
 
 @router.post("/generate-question/{order}")
-def generate_next_question(order: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    user_id = user.id
+def generate_next_question(order: int, db: Session = Depends(get_db), user_id=Depends(get_current_user)):
 
     # ✅ 최신 세션 조회
     session = db.query(InterviewSession).filter(
