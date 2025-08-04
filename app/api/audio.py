@@ -1,13 +1,16 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-
+from app.repository.interview import InterviewAnswer, InterviewQuestion
 from app.services.feedback.speechfeedback import SpeechFeedbackGenerator
 from app.services.speech.speech_analyzer import SpeechAnalyzer
 from app.services.stt.stt_service import STTService
+from app.utils.auth_ws import get_user_id_from_websocket
 import tempfile
 import os
 import asyncio
 import subprocess
 from dotenv import load_dotenv
+from sqlalchemy.orm import Session
+from app.repository.database import SessionLocal
 
 load_dotenv()
 
@@ -18,7 +21,19 @@ router = APIRouter()
 @router.websocket("/ws/transcript")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-
+    
+    user_id = await get_user_id_from_websocket(websocket)
+    
+    print(f"user_id: {user_id}")
+    question_id_str = websocket.query_params.get("question_id")
+    if not question_id_str or not question_id_str.isdigit():
+        await websocket.send_json({"error": "question_id가 유효하지 않습니다."})
+        return
+    question_id = int(question_id_str)
+    if not question_id_str or not question_id_str.isdigit():
+        await websocket.send_json({"error": "question_id가 유효하지 않습니다."})
+        return
+    
     try:
         # 1. 질문 단위로 전체 WebM 수신
         data = await websocket.receive_bytes()
@@ -65,6 +80,15 @@ async def websocket_endpoint(websocket: WebSocket):
         clova = STTService(stt_type="clova")
         clova_text, clova_result = clova.transcribe(wav_path)
 
+        db: Session = SessionLocal()
+        answer = InterviewAnswer(
+            question_id=question_id,
+            user_id=user_id,
+            answer_text=clova_text
+        )
+        db.add(answer)
+        db.commit()
+
         # vito
         vito = STTService(stt_type="vito")
         vito_text, vito_result = vito.transcribe(wav_path)
@@ -81,8 +105,8 @@ async def websocket_endpoint(websocket: WebSocket):
         print(feedback)
         # 5. 결과 전송
         await websocket.send_json({
-            "transcript": "",
-            "feedback": "feedback"
+            "transcript": clova_text,
+            "feedback": feedback
         })
 
         os.remove(webm_path)

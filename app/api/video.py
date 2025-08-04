@@ -35,6 +35,7 @@
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.services.vision.posture_analyzer import PostureAnalyzer
+from app.utils.auth_ws import get_user_id_from_websocket
 import numpy as np
 import cv2
 
@@ -45,6 +46,14 @@ async def expression_socket(websocket: WebSocket):
     await websocket.accept()
     analyzer = PostureAnalyzer()
 
+    user_id = await get_user_id_from_websocket(websocket)
+    print(f"user_id: {user_id}")
+
+    question_id_str = websocket.query_params.get("question_id")
+    if not question_id_str or not question_id_str.isdigit():
+        print("if문 진입")
+        await websocket.send_json({"error": "question_id가 유효하지 않습니다."})
+        return
     try:
         while True:
             data = await websocket.receive_bytes()

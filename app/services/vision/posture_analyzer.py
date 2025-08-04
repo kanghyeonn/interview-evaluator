@@ -78,6 +78,7 @@ class PostureAnalyzer:
         :return: 분석 결과 딕셔너리
         """
         gaze_result, head_result, shoulder_result, pitch_result, hand_result = "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN", "UNKNOWN"
+        gaze_direction, gaze_vertical = "UNKNOWN", "UNKNOWN"
 
         frame = cv2.flip(frame, 1)
         h, w = frame.shape[:2]

@@ -79,4 +79,4 @@ def hwpx_to_html(input_path, output_path=None, extract_dir=None):
 
     return text
 
-print(hwpx_to_html(r"C:\Users\ankh1\Downloads\안강현_이력서_완료.hwpx"))
+#print(hwpx_to_html(r"C:\Users\ankh1\Downloads\안강현_이력서_완료.hwpx"))
