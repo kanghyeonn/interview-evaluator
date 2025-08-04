@@ -19,7 +19,7 @@ def get_db():
 
 @router.post("/start-interview")
 def start_interview(db: Session = Depends(get_db), user_id=Depends(get_current_user)):
-
+    print("질문 생성 시작")
     # 인터뷰 세션 생성
     session = InterviewSession(user_id=user_id)
     db.add(session)
@@ -30,7 +30,7 @@ def start_interview(db: Session = Depends(get_db), user_id=Depends(get_current_u
     generator = InterviewQuestionGenerator(os.getenv("GEMINI_API_KEY"))
     parsed = generator.load_structured_from_db(db, user_id)
     q1 = generator.generate_conceptual_question(parsed)
-    print("질무 생성 완료")
+    print("질문 생성 완료")
     print("-" * 50)
     print(q1)
     # DB 저장
