@@ -36,7 +36,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from app.services.vision.posture_analyzer import PostureAnalyzer
-from app.services.vision.emotion_analyzer import EmotionAnalyzer
+from app.services.emotion.emotion_analyzer import EmotionAnalyzer
 from app.utils.auth_ws import get_user_id_from_websocket
 from app.repository.analysis import VideoEvaluationResult
 from app.repository.interview import InterviewQuestion, InterviewSession
@@ -57,7 +57,7 @@ def get_db():
 async def expression_socket(websocket: WebSocket):
     await websocket.accept()
     analyzer = PostureAnalyzer()
-    emotion_analyzer = EmotionAnalyzer("best.pt")
+    emotion_analyzer = EmotionAnalyzer(r"C:\interview\interview-evaluator\app\services\emotion\best.pt")
 
     db: Session = next(get_db())
 

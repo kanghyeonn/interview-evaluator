@@ -88,5 +88,6 @@ def get_full_latest_result(
             "gaze_score": video_result.gaze_score if video_result else None,
             "shoulder_warning": video_result.shoulder_warning if video_result else None,
             "hand_warning": video_result.hand_warning if video_result else None,
-        }
+        },
+        "best_emotion": video_result.emotion_best if video_result else None
     }
