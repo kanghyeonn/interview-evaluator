@@ -13,6 +13,7 @@ class InterviewSession(Base):
     started_at = Column(TIMESTAMP, default=datetime.utcnow)
 
     questions = relationship("InterviewQuestion", back_populates="session")
+    evaluation_results = relationship("EvaluationResult", back_populates="session")
 
 
 class InterviewQuestion(Base):
@@ -27,14 +28,17 @@ class InterviewQuestion(Base):
 
     session = relationship("InterviewSession", back_populates="questions")
     answer = relationship("InterviewAnswer", uselist=False, back_populates="question")
+    evaluation_result = relationship("EvaluationResult", back_populates="question", uselist=False)
 
 
 class InterviewAnswer(Base):
     __tablename__ = "interview_answer"
     id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(Integer, ForeignKey("interview_session.id"), nullable=False)
     question_id = Column(Integer, ForeignKey("interview_question.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     answer_text = Column(Text)
     created_at = Column(TIMESTAMP, default=datetime.utcnow)
 
     question = relationship("InterviewQuestion", back_populates="answer")
+    session = relationship("InterviewSession", backref="answers")

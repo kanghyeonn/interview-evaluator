@@ -1,4 +1,5 @@
 # app/models/analysis.py
+from sqlalchemy.orm import relationship
 from sqlalchemy import Column, Integer, ForeignKey, Float, String, Text, TIMESTAMP
 from app.repository.database import Base
 from datetime import datetime, timezone
@@ -7,7 +8,11 @@ class EvaluationResult(Base):
     __tablename__ = "evaluation_result"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)             
+    session_id = Column(Integer, ForeignKey("interview_session.id"), nullable=False)  
     question_id = Column(Integer, ForeignKey("interview_question.id"), nullable=False)
+
     similarity = Column(Float)
     intent_score = Column(Float)
     knowledge_score = Column(Float)
@@ -16,6 +21,7 @@ class EvaluationResult(Base):
     strengths = Column(Text)
     improvements = Column(Text)
     final_feedback = Column(Text)
+
     speed_score = Column(Integer)
     filler_score = Column(Integer)
     pitch_score = Column(Integer)
@@ -23,5 +29,9 @@ class EvaluationResult(Base):
     speed_label = Column(String(20))
     fluency_label = Column(String(20))
     tone_label = Column(String(20))
+
     created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+    session = relationship("InterviewSession", back_populates="evaluation_results")
+    user = relationship("User", back_populates="evaluation_results")
+    question = relationship("InterviewQuestion")
