@@ -93,6 +93,7 @@ async def expression_socket(websocket: WebSocket):
 
     except WebSocketDisconnect:
         print("🔌 WebSocket 연결 종료")
+        result = analyzer.get_final_score()
     except Exception as e:
         print(f"❌ 처리 중 예외 발생: {e}")
         await websocket.send_json({"expression": "분석 중 오류 발생"})

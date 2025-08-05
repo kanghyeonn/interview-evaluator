@@ -5,7 +5,8 @@ import tempfile
 from typing import Dict
 import time
 
-class PostureAnalyzer:
+
+class PostureFeedbackGenerator:
     def __init__(self):
         # MediaPipe 구성 요소 초기화
         self.mp_face_mesh = mp.solutions.face_mesh
@@ -78,12 +79,12 @@ class PostureAnalyzer:
 
         # solvePnP용 3D 모델 포인트
         self.model_points = np.array([
-            (0.0, 0.0, 0.0),       # Nose tip
-            (0.0, -63.6, -12.5),   # Chin
+            (0.0, 0.0, 0.0),  # Nose tip
+            (0.0, -63.6, -12.5),  # Chin
             (-43.3, 32.7, -26.0),  # Left eye corner
-            (43.3, 32.7, -26.0),   # Right eye corner
-            (-28.9, -28.9, -24.1), # Left mouth
-            (28.9, -28.9, -24.1)   # Right mouth
+            (43.3, 32.7, -26.0),  # Right eye corner
+            (-28.9, -28.9, -24.1),  # Left mouth
+            (28.9, -28.9, -24.1)  # Right mouth
         ], dtype=np.float32)
 
     def get_camera_matrix(self, w, h):
@@ -95,7 +96,7 @@ class PostureAnalyzer:
             [0, 0, 1]
         ], dtype=np.float64)
 
-    def analyze_frame(self, frame: np.ndarray) -> Dict[str, str]:
+    def analyze_video(self, frame: np.ndarray) -> Dict[str, str]:
         """
         단일 프레임에서 시선, 고개 방향, 어깨 기울기를 분석합니다.
         :param frame: BGR 이미지 프레임
@@ -110,7 +111,7 @@ class PostureAnalyzer:
 
         frame = cv2.flip(frame, 1)
         h, w = frame.shape[:2]
-        
+
         # BGR -> RGB 변환
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -138,20 +139,19 @@ class PostureAnalyzer:
             left_iris_left = np.array([lm[self.LEFT_IRIS_LEFT].x * w, lm[self.LEFT_IRIS_LEFT].y * h])
             left_iris_right = np.array([lm[self.LEFT_IRIS_RIGHT].x * w, lm[self.LEFT_IRIS_RIGHT].y * h])
             left_ratio = np.linalg.norm(left_iris_left - left_eye_outer) / (
-                        np.linalg.norm(left_iris_right - left_iris_left) + 1e-6)
+                    np.linalg.norm(left_iris_right - left_iris_left) + 1e-6)
 
             right_eye_outer = np.array([lm[self.RIGHT_EYE_OUTER].x * w, lm[self.RIGHT_EYE_OUTER].y * h])
             right_iris_left = np.array([lm[self.RIGHT_IRIS_LEFT].x * w, lm[self.RIGHT_IRIS_LEFT].y * h])
             right_iris_right = np.array([lm[self.RIGHT_IRIS_RIGHT].x * w, lm[self.RIGHT_IRIS_RIGHT].y * h])
             right_ratio = np.linalg.norm(right_eye_outer - right_iris_right) / (
-                        np.linalg.norm(right_iris_right - right_iris_left) + 1e-6)
+                    np.linalg.norm(right_iris_right - right_iris_left) + 1e-6)
 
             gaze_h = "LEFT" if left_ratio < 0.42 else "RIGHT" if right_ratio < 0.40 else "CENTER"
 
             # left_gaze = "LEFT" if left_ratio < 0.48 else "CENTER"
             # right_gaze = "RIGHT" if right_ratio < 0.48 else "CENTER"
             # gaze_direction = "LEFT" if left_gaze == "LEFT" else "RIGHT" if right_gaze == "RIGHT" else "CENTER"
-
 
             # 상하 시선 분석 (눈 크기 변화 기반)
             # eye_top = lm[159].y
@@ -191,7 +191,7 @@ class PostureAnalyzer:
             #     self.gaze_state = gaze_vertical
             #
             # gaze_result = f"Gaze: {gaze_direction} / {gaze_vertical}"
-            
+
             # 고개 pitch 분석
             # image_points = np.array([
             #     [lm[1].x * w, lm[1].y * h],
@@ -279,7 +279,8 @@ class PostureAnalyzer:
             self.shoulder_prev_state = shoulder_dir
 
             # 손 경고 카운트
-            hand_dir = "VISIBLE" if plm[self.LEFT_INDEX].visibility > 0.5 or plm[self.RIGHT_INDEX].visibility > 0.5 else "NONE"
+            hand_dir = "VISIBLE" if plm[self.LEFT_INDEX].visibility > 0.5 or plm[
+                self.RIGHT_INDEX].visibility > 0.5 else "NONE"
             if hand_dir != self.hand_prev_state and self.hand_prev_state == "NONE":
                 self.hand_warning_count += 1
             self.hand_prev_state = hand_dir
@@ -287,19 +288,7 @@ class PostureAnalyzer:
         if turn_dir == "CENTER" and pitch_dir == "CENTER" and gaze_h == "CENTER":
             self.center_frames += 1
 
-        # 최종 상태 판단 결과
-        return {
-            "gaze": gaze_h == "CENTER",
-            "pitch": pitch_dir == "CENTER",
-            "head": turn_dir == "CENTER",
-            "shoulder": shoulder_dir == "CENTER",
-            "hand": hand_dir == "NONE",
-        }
-
-    def get_final_score(self) -> Dict[str, int]:
-        """
-        누적된 분석 결과를 기반으로 최종 점수를 계산합니다.
-        """
+        # 점수 계산
         gaze_score = int((self.center_frames / self.total_frames) * 100) if self.total_frames > 0 else 0
         shoulder_score = max(0, 50 - 5 * self.shoulder_warning_count)
         hand_score = max(0, 50 - 5 * self.hand_warning_count)

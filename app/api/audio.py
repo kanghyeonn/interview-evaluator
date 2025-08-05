@@ -1,5 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.repository.interview import InterviewAnswer, InterviewQuestion
+from app.repository.interview import InterviewAnswer, InterviewQuestion, InterviewSession
 from app.services.feedback.speechfeedback import SpeechFeedbackGenerator
 from app.services.speech.speech_analyzer import SpeechAnalyzer
 from app.services.stt.stt_service import STTService
@@ -35,7 +35,7 @@ async def websocket_endpoint(websocket: WebSocket):
     if not question_id_str or not question_id_str.isdigit():
         await websocket.send_json({"error": "question_id가 유효하지 않습니다."})
         return
-    
+
     try:
         # 1. 질문 단위로 전체 WebM 수신
         data = await websocket.receive_bytes()
@@ -66,89 +66,156 @@ async def websocket_endpoint(websocket: WebSocket):
             #os.remove(webm_path)
             return
 
-        # 4. Whisper로 텍스트 추출
-        # result = model.transcribe(wav_path, language='ko')
-        # print("📝 STT 결과:", result["text"])
-
-        # 4. Clova로 텍스트 추출
-        # clova = ClovaSpeechClient()
-        # text, data = clova.get_full_text_from_upload(wav_path, diarization=None)
-        # print("📝 STT 결과:", text)
-        # print(data)
-        # print(wav_path)
-
         # stt 모델 결과 추출
         # clova
         clova = STTService(stt_type="clova")
         clova_text, clova_result = clova.transcribe(wav_path)
 
         db: Session = SessionLocal()
-        answer = InterviewAnswer(
-            question_id=question_id,
-            user_id=user_id,
-            answer_text=clova_text
-        )
-        db.add(answer)
-        db.commit()
 
-        # vito
-        vito = STTService(stt_type="vito")
-        vito_text, vito_result = vito.transcribe(wav_path)
+        # 최신 세션 조회
+        session = (db.query(InterviewSession)
+            .filter_by(user_id=user_id) \
+            .order_by(InterviewSession.started_at.desc()) \
+            .first())
 
-        # 분석
-        print("답변 분석중")
-        analyzer = SpeechAnalyzer(clova_result)
-        speed = analyzer.speech_speed_calculate()
-        pitch = analyzer.calculate_pitch_variation(wav_path)
-        fillers = analyzer.find_filler_words(vito_text)
+        # 해당 세션의 마지막 질문 조회
+        question = db.query(InterviewQuestion) \
+            .filter_by(session_id=session.id) \
+            .order_by(InterviewQuestion.question_order.desc()) \
+            .first()
 
-        # speech feedback 생성
-        feedback = SpeechFeedbackGenerator(speed, pitch, fillers).generate_feedback()
-        labels = feedback.get("labels", {})
-        score_detail = feedback.get("score_detail", {})
-        total_score = feedback.get("total_score", 0)
+        if not question:
+            await websocket.send_json({"error": "질문을 찾을 수 없습니다."})
+            return
 
-        question = db.query(InterviewQuestion).filter_by(id=question_id).first()
-        orchestrator = EvaluationOrchestrator()
-        result = orchestrator.evaluate_answer(
-            question.question_text,
-            clova_text,
-            question.question_type
-        )
+        session_id = question.session_id
 
-        evaluation = EvaluationResult(
-            question_id=question_id,
-            similarity=result["similarity"],
-            intent_score=result["intent_score"],
-            knowledge_score=result["knowledge_score"],
-            final_text_score=result["final_score"],
-            model_answer=result["model_answer"],
-            strengths="\n".join(result["feedback"]["strengths"]),
-            improvements="\n".join(result["feedback"]["improvements"]),
-            final_feedback=result["feedback"]["final_feedback"],
+        if clova_text.strip() == "":
+            answer = InterviewAnswer(
+                session_id=question.session_id,
+                question_id=question.id,
+                question_order=question.question_order,
+                user_id=user_id,
+                answer_text=""
+            )
+            db.add(answer)
+            db.commit()
 
-            speed_score=score_detail.get("speed"),
-            filler_score=score_detail.get("filler"),
-            pitch_score=score_detail.get("pitch"),
-            fianl_speech_score=total_score,
-            speed_label=labels.get("speed"),
-            fluency_label=labels.get("fluency"),
-            tone_label=labels.get("tone")
-        )
+            evaluation = EvaluationResult(
+                user_id=user_id,
+                session_id=question.session_id,
+                question_id=question.id,
+                question_order=question.question_order,
+                similarity=0.0,
+                intent_score=0.0,
+                knowledge_score=0.0,
+                final_text_score=0,
+                model_answer="",
+                strengths="답변을 인식할 수 없습니다.",
+                improvements="녹음된 음성이 없거나 인식되지 않았습니다.",
+                final_feedback="음성 인식이 되지 않아 평가가 불가능합니다.",
+                speed_score=0,
+                filler_score=0,
+                pitch_score=0,
+                final_speech_score=0,
+                speed_label="없음",
+                fluency_label="없음",
+                tone_label="없음"
+            )
+            db.add(evaluation)
+            db.commit()
+            print("----------------------------결과저장")
+            print(evaluation.id)
+            await websocket.send_json({
+                "transcript": "",
+                "feedback": {
+                    "feedback": "음성이 인식되지 않아 피드백을 생성할 수 없습니다.",
+                    "score_detail": {
+                        "speed": 0,
+                        "filler": 0,
+                        "pitch": 0
+                    },
+                    "total_score_normalized": 0.0
+                }
+            })
+            os.remove(webm_path)
+            os.remove(wav_path)
+            return
+        else:
+            answer = InterviewAnswer(
+                session_id=session_id,
+                question_id=question.id,
+                question_order=question.question_order,
+                user_id=user_id,
+                answer_text=clova_text
+            )
+            db.add(answer)
+            db.commit()
 
-        db.add(evaluation)
-        db.commit()
+            # vito
+            vito = STTService(stt_type="vito")
+            vito_text, vito_result = vito.transcribe(wav_path)
 
-        print(clova_text)
-        print(feedback)
-        # 5. 결과 전송
-        await websocket.send_json({
-            "transcript": clova_text,
-            "feedback": feedback
-        })
+            # 분석
+            print("답변 분석중")
+            analyzer = SpeechAnalyzer(clova_result)
+            speed = analyzer.speech_speed_calculate()
+            pitch = analyzer.calculate_pitch_variation(wav_path)
+            fillers = analyzer.find_filler_words(vito_text)
 
-        os.remove(webm_path)
-        os.remove(wav_path)
+            # speech feedback 생성
+            feedback = SpeechFeedbackGenerator(speed, pitch, fillers).generate_feedback()
+            labels = feedback.get("labels", {})
+            score_detail = feedback.get("score_detail", {})
+            total_score = feedback.get("total_score", 0)
+
+
+            orchestrator = EvaluationOrchestrator()
+            result = orchestrator.evaluate_answer(
+                question.question_text,
+                clova_text,
+                question.question_type
+            )
+
+            evaluation = EvaluationResult(
+                user_id=user_id,  # ✅ 필수 필드 추가
+                session_id=session_id,
+                question_id=question.id,
+                question_order=question.question_order,
+                similarity=result["similarity"],
+                intent_score=result["intent_score"],
+                knowledge_score=result["knowledge_score"],
+                final_text_score=result["final_score"],
+                model_answer=result["model_answer"],
+                strengths="\n".join(result["feedback"]["strengths"]),
+                improvements="\n".join(result["feedback"]["improvements"]),
+                final_feedback=result["feedback"]["final_feedback"],
+
+                speed_score=score_detail.get("speed"),
+                filler_score=score_detail.get("filler"),
+                pitch_score=score_detail.get("pitch"),
+                final_speech_score=total_score,  # ✅ 오타 수정
+                speed_label=labels.get("speed"),
+                fluency_label=labels.get("fluency"),
+                tone_label=labels.get("tone")
+            )
+
+            db.add(evaluation)
+            db.commit()
+            print("----------------------------결과저장")
+            print(evaluation.id)
+
+            print(clova_text)
+            print(feedback)
+            # 5. 결과 전송
+            await websocket.send_json({
+                "transcript": clova_text,
+                "feedback": feedback
+            })
+
+            os.remove(webm_path)
+            os.remove(wav_path)
 
     except WebSocketDisconnect:
         print("🔌 WebSocket 연결 종료")
