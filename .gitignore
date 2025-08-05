@@ -130,3 +130,5 @@ test/
 .json
 app/services/test/
 interview-evaluator/service-account-key.json
+interview-evaluator/app/emotion/best.pt
+*.pt

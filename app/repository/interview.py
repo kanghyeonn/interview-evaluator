@@ -14,6 +14,7 @@ class InterviewSession(Base):
 
     questions = relationship("InterviewQuestion", back_populates="session")
     evaluation_results = relationship("EvaluationResult", back_populates="session")
+    video_results = relationship("VideoEvaluationResult", back_populates="session")
 
 class InterviewQuestion(Base):
     __tablename__ = "interview_question"
@@ -28,6 +29,7 @@ class InterviewQuestion(Base):
     session = relationship("InterviewSession", back_populates="questions")
     answer = relationship("InterviewAnswer", uselist=False, back_populates="question")
     evaluation_result = relationship("EvaluationResult", back_populates="question", uselist=False)
+    video_result = relationship("VideoEvaluationResult", back_populates="question", uselist=False)
 
 class InterviewAnswer(Base):
     __tablename__ = "interview_answer"

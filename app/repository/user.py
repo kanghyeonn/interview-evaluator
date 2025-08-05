@@ -21,3 +21,4 @@ class User(Base):
     # 관계 설정 (1:N → User:Resume)
     resumes = relationship("Resume", back_populates="user", cascade="all, delete-orphan")
     evaluation_results = relationship("EvaluationResult", back_populates="user")
+    video_results = relationship("VideoEvaluationResult", back_populates="user")

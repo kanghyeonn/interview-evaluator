@@ -53,3 +53,34 @@ class EvaluationResult(Base):
     user = relationship("User", back_populates="evaluation_results")
     session = relationship("InterviewSession", back_populates="evaluation_results")
     question = relationship("InterviewQuestion", back_populates="evaluation_result")
+
+class VideoEvaluationResult(Base):
+    __tablename__ = "video_evaluation_result"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("interview_session.id"), nullable=False)
+    question_id = Column(Integer, ForeignKey("interview_question.id"), nullable=False)
+
+    question_order = Column(Integer, nullable=False)  # ✅ 질문 순서 (1~6)
+
+    gaze_score = Column(Integer)
+    shoulder_warning = Column(Integer)
+    hand_warning = Column(Integer)
+    posture_score = Column(Integer)
+    final_video_score = Column(Integer)
+
+    positive_rate = Column(Integer)  # 긍정 %
+    neutral_rate = Column(Integer)  # 중립 %
+    negative_rate = Column(Integer)  # 부정 %
+    tense_rate = Column(Integer)  # 긴장 %
+    emotion_best = Column(String(20))  # 가장 높은 감정
+    emotion_score = Column(Integer)  # 감정 총점
+
+    created_at = Column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    # 관계 설정
+    user = relationship("User", back_populates="video_results")
+    session = relationship("InterviewSession", back_populates="video_results")
+    question = relationship("InterviewQuestion", back_populates="video_result", uselist=False)

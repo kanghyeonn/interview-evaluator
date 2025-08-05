@@ -92,6 +92,7 @@ async def websocket_endpoint(websocket: WebSocket):
         session_id = question.session_id
 
         if clova_text.strip() == "":
+            print("결과 없는 if 문 진입")
             answer = InterviewAnswer(
                 session_id=question.session_id,
                 question_id=question.id,
@@ -101,7 +102,7 @@ async def websocket_endpoint(websocket: WebSocket):
             )
             db.add(answer)
             db.commit()
-
+            print("answer 저장")
             evaluation = EvaluationResult(
                 user_id=user_id,
                 session_id=question.session_id,
@@ -125,7 +126,7 @@ async def websocket_endpoint(websocket: WebSocket):
             )
             db.add(evaluation)
             db.commit()
-            print("----------------------------결과저장")
+            print("evaluation----------------------------결과저장")
             print(evaluation.id)
             await websocket.send_json({
                 "transcript": "",

@@ -34,26 +34,43 @@
 # app/api/video.py
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from sqlalchemy.orm import Session
 from app.services.vision.posture_analyzer import PostureAnalyzer
+from app.services.vision.emotion_analyzer import EmotionAnalyzer
 from app.utils.auth_ws import get_user_id_from_websocket
+from app.repository.analysis import VideoEvaluationResult
+from app.repository.interview import InterviewQuestion, InterviewSession
+from app.repository.database import SessionLocal
 import numpy as np
 import cv2
 
 router = APIRouter()
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 @router.websocket("/ws/expression")
 async def expression_socket(websocket: WebSocket):
     await websocket.accept()
     analyzer = PostureAnalyzer()
+    emotion_analyzer = EmotionAnalyzer("best.pt")
+
+    db: Session = next(get_db())
 
     user_id = await get_user_id_from_websocket(websocket)
-    print(f"user_id: {user_id}")
 
-    question_id_str = websocket.query_params.get("question_id")
-    if not question_id_str or not question_id_str.isdigit():
-        print("if문 진입")
-        await websocket.send_json({"error": "question_id가 유효하지 않습니다."})
+    print(f"user_id: {user_id}")
+    # 1. 쿼리 파라미터에서 question_order 받기
+    order_str = websocket.query_params.get("question_id")
+    if not order_str or not order_str.isdigit():
+        await websocket.send_json({"error": "question_order가 유효하지 않습니다."})
         return
+    question_order = int(order_str)
+
     try:
         while True:
             data = await websocket.receive_bytes()
@@ -68,6 +85,9 @@ async def expression_socket(websocket: WebSocket):
             #print("자세분석중~~~~~")
             # 🧠 2. 자세 분석
             result = analyzer.analyze_frame(frame)
+
+            # 감정 분석
+            emotion_analyzer.analyze_frame(frame)
 
             # 📢 3. 상태 판단
             warnings = []
@@ -94,6 +114,51 @@ async def expression_socket(websocket: WebSocket):
     except WebSocketDisconnect:
         print("🔌 WebSocket 연결 종료")
         result = analyzer.get_final_score()
+        emotion_summary = emotion_analyzer.get_emotion_summary()
+
+        # 1. 가장 최근 세션 조회
+        session = (
+            db.query(InterviewSession)
+            .filter_by(user_id=user_id)
+            .order_by(InterviewSession.started_at.desc())
+            .first()
+        )
+        if not session:
+            print("❌ 세션 없음")
+            return
+
+        # 2. session_id + question_order로 InterviewQuestion 조회
+        question = (
+            db.query(InterviewQuestion)
+            .filter_by(session_id=session.id, question_order=question_order)
+            .first()
+        )
+        if not question:
+            print("❌ 질문 없음")
+            return
+
+        question_id = question.id
+
+        video_result = VideoEvaluationResult(
+            user_id=user_id,
+            session_id=session.id,
+            question_id=question.id,
+            question_order=question_order,
+            gaze_score=result["gaze_rate_score"],
+            shoulder_warning=result["shoulder_posture_warning_count"],
+            hand_warning=result["hand_posture_warning_count"],
+            posture_score=result["shoulder_hand_score"],
+            final_video_score=result["video_score"],
+            positive_rate=emotion_summary.get("긍정", 0),
+            neutral_rate=emotion_summary.get("중립", 0),
+            negative_rate=emotion_summary.get("부정", 0),
+            tense_rate=emotion_summary.get("긴장", 0),
+            emotion_best=emotion_summary.get("best"),
+            emotion_score=emotion_summary.get("score")
+        )
+        print("video_result----------------------------결과저장")
+        db.add(video_result)
+        db.commit()
     except Exception as e:
         print(f"❌ 처리 중 예외 발생: {e}")
         await websocket.send_json({"expression": "분석 중 오류 발생"})
