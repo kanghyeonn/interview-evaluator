@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.repository.database import SessionLocal
@@ -38,27 +39,27 @@ def get_evaluation_result(
     # 4. 답변 조회
     answer = db.query(InterviewAnswer).filter_by(question_id=question_id).first()
 
-    return {
-        "question": question.question_text,
-        "user_answer": answer.answer_text if answer else "",
-        "model_answer": result.model_answer if result.model_answer else "",
-        "final_score": result.final_score,
-        "similarity": result.similarity,
-        "intent_score": result.intent_score,
-        "knowledge_score": result.knowledge_score,
-        "strengths": result.strengths.split("\n") if result.strengths else [],
-        "improvements": result.improvements.split("\n") if result.improvements else [],
-        "final_feedback": result.final_feedback,
-        "speed_score": result.speed_score,
-        "filler_score": result.filler_score,
-        "pitch_score": result.pitch_score,
-        "total_score": result.final_speech_score,
-        "labels": {
-            "speed": result.speed_label,
-            "fluency": result.fluency_label,
-            "tone": result.tone_label
-        }
-    }
+    # return {
+    #     "question": question.question_text,
+    #     "user_answer": answer.answer_text if answer else "",
+    #     "model_answer": result.model_answer if result.model_answer else "",
+    #     "final_score": result.final_score,
+    #     "similarity": result.similarity,
+    #     "intent_score": result.intent_score,
+    #     "knowledge_score": result.knowledge_score,
+    #     "strengths": result.strengths.split("\n") if result.strengths else [],
+    #     "improvements": result.improvements.split("\n") if result.improvements else [],
+    #     "final_feedback": result.final_feedback,
+    #     "speed_score": result.speed_score,
+    #     "filler_score": result.filler_score,
+    #     "pitch_score": result.pitch_score,
+    #     "total_score": result.final_speech_score,
+    #     "labels": {
+    #         "speed": result.speed_label,
+    #         "fluency": result.fluency_label,
+    #         "tone": result.tone_label
+    #     }
+    # }
 
     return {
         "question": "오늘 뭐했어",
@@ -78,4 +79,3 @@ def get_evaluation_result(
         ],
         "final_feedback": "전체적으로 자연스러운 답변이었으며, 하루 일과를 설명하는 데 무리가 없었습니다. 다만, 세부 사항을 조금 더 구체적으로 표현하면 더 좋겠습니다."
     }
-
