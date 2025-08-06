@@ -6,6 +6,7 @@ from app.repository.database import SessionLocal
 from app.repository.analysis import EvaluationResult, VideoEvaluationResult
 from app.repository.interview import InterviewSession, InterviewQuestion, InterviewAnswer
 from app.services.user.dependencies import get_current_user
+from app.services.score.scoring import QuestionTypeWeights
 
 router = APIRouter()
 
@@ -70,6 +71,18 @@ def get_full_latest_result(
         .first()
     )
 
+    question_analysis = {
+        "type": latest_question.question_type,
+        "detailAnalysis": {
+            "text": {"score": (text_result.final_text_score or 0) if text_result else 0},
+            "voice": {"score": (text_result.final_speech_score or 0) if text_result else 0},
+            "emotion": {"score": (video_result.emotion_score or 0) if video_result else 0},
+            "video": {"score": (video_result.final_video_score or 0) if video_result else 0}
+        }
+    }
+
+    weighted_score = QuestionTypeWeights.calculate_weighted_score(question_analysis)
+
     return {
         "session_id": latest_session.id,
         "question_order": latest_question.question_order,
@@ -89,5 +102,6 @@ def get_full_latest_result(
             "shoulder_warning": video_result.shoulder_warning if video_result else None,
             "hand_warning": video_result.hand_warning if video_result else None,
         },
-        "best_emotion": video_result.emotion_best if video_result else None
+        "best_emotion": video_result.emotion_best if video_result else None,
+        "weighted_score": weighted_score
     }
